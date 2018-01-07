@@ -11,10 +11,36 @@ from bs4 import BeautifulSoup
 from time import localtime, strftime
 
 
-class GoogleImagesScraper:
+class GoogleImagesScraper(object):
+    """
+    Class to scrap images from Google Images web page.
+
+    GoogleImagesScraper class scrap Google's page using BeautifulSoup4. It receives several arguments to configure
+    the scraper, like image extensions to download, output directory, prefix and suffix for image filenames, and more.
+
+    Attributes:
+        exts: A list of strings with allowed extensions to download.
+        output_dir: A string with the path of the output directory.
+        prefix: A string with the prefix used to name the image files.
+        suffix: A string with the suffix used to name the image files.
+        limit: An integer with the maximum amount of images to download.
+        logger: A boolean to enabled logging.
+    """
 
     def __init__(self, exts=['jpg', 'jpeg', 'png', 'bmp'], output_dir=os.path.expanduser('~'),
                  prefix='', suffix='', limit=100, logger=False):
+        """
+        Init GoogleImagesScraper with allowed extensions, output directory, prefix, suffix, maximum number of files,
+        and logging option.
+
+        :param exts: A list of strings with allowed extensions to download.
+        :param output_dir: A string with the path of the output directory.
+        :param prefix: A string with the prefix used to name the image files.
+        :param suffix: A string with the suffix used to name the image files.
+        :param limit: An integer with the maximum amount of images to download.
+        :param logger: A boolean to enabled logging.
+        """
+
         # We will make (maybe) several request to the same host, so reusing the same TCP connection
         # result in a significant performance increase
         self.session = requests.Session()
@@ -50,6 +76,11 @@ class GoogleImagesScraper:
         requests.packages.urllib3.disable_warnings()
 
     def _set_logger(self, has_logger):
+        """
+        Set logger configuration.
+
+        :param has_logger: A boolen that indicates if logging is enabled
+        """
         if has_logger:
             logging.basicConfig(
                 level=logging.INFO,
@@ -62,6 +93,11 @@ class GoogleImagesScraper:
             self.logger = logging.getLogger('None')
 
     def _make_soup(self):
+        """
+        Create a tree structure using tags as nodes.
+
+        :return: BeautifulSoup object
+        """
         self.logger.debug('Making URL')
         # Create the URL
         url = self.url
@@ -77,6 +113,11 @@ class GoogleImagesScraper:
         return BeautifulSoup(html, "lxml")
 
     def _download_image(self, image_url):
+        """
+        Private method to download the image given by the URL and save it in 'output_dir'.
+
+        :param image_url: Image URL
+        """
         self.logger.debug('Getting image URL')
         # Get image extension
         extension = image_url.split('.')[-1]
@@ -106,6 +147,14 @@ class GoogleImagesScraper:
             self.logger.error('An error has ocurred: %s' % str(e))
 
     def download_images(self, query, output_dir=None):
+        """
+        Download all images resulted from Google Images query.
+
+        :param query: A string with the keywords, separated by commas
+        :param output_dir: Optional string with the ouput directory
+        :return: A tuple with an integer indicating how many images were downloaded, and a double with the number of
+                 seconds required to download the images
+        """
         start = time.time()
         images_down = 0
         self.logger.debug('Setting output directory')
