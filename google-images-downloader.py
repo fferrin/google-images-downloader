@@ -3,19 +3,12 @@
 import json
 import logging
 import requests
+import optparse
 import os
+import time
 
 from bs4 import BeautifulSoup
 from time import localtime, strftime
-
-
-# TODO:
-# - Agregar carpeta de destino
-# - Agregar única extensión o que elija por default de la lista
-# - Agregar tiempo total
-# - Agregar opción de archivo de error para borrarlos (ver cómo validarlos)
-# - Agregar formato para el nombre
-# - Límite de imágenes
 
 
 class GoogleImagesScraper:
@@ -24,7 +17,7 @@ class GoogleImagesScraper:
                  exts=['jpg', 'jpeg', 'png', 'bmp'],
                  output_dir=os.path.expanduser('~'),
                  prefix='',
-                 sufix='',
+                 suffix='',
                  limit=100,
                  logger=False):
         # We will make (maybe) several request to the same host, so reusing the same TCP connection
@@ -42,12 +35,12 @@ class GoogleImagesScraper:
         # By default, save images and log file in a folder inside home directory
         self.output_dir = output_dir
 
-        # Default prefix and sufix for output file names
+        # Default prefix and suffix for output file names
         self.prefix = prefix if prefix == '' else prefix + '-'
-        self.sufix = sufix if sufix == '' else '-' + sufix
+        self.suffix = suffix if suffix == '' else '-' + suffix
 
         # Downloads limit
-        self.limit = limit
+        self.limit = int(limit)
 
         # Number of files in output_dir
         self.counter = 0
@@ -98,11 +91,11 @@ class GoogleImagesScraper:
 
         self.logger.debug('Setting image filename')
         # Set local filename and update counter attribute
-        local_filename = os.path.join(self.output_dir, '%s%04d%s.%s' % (self.prefix, self.counter + 1, self.sufix, extension))
+        local_filename = os.path.join(self.output_dir, '%s%04d%s.%s' % (self.prefix, self.counter + 1, self.suffix, extension))
         self.counter += 1
 
         self.logger.info('"%s" image downloaded from "%s"' % (local_filename, image_url))
-        # Get image bytes and save them in `local_filename`
+        # Get image bytes and save them in 'local_filename'
         try:
             r = self.session.get(image_url, stream=True, verify=False)
             with open(local_filename, 'wb') as f:
@@ -111,7 +104,8 @@ class GoogleImagesScraper:
         except ConnectionError as e:
             self.logger.error('An error has ocurred: %s' % str(e))
 
-    def get_images(self, query, output_dir=None):
+    def download_images(self, query, output_dir=None):
+        start = time.time()
         images_down = 0
         self.logger.debug('Setting output directory')
         # If output path is given, set attribute output_dir
@@ -146,17 +140,50 @@ class GoogleImagesScraper:
                 self._download_image(json.loads(div.contents[0])['ou'])
                 images_down += 1
             else:
+                elapsed_time = time.time() - start
                 self.logger.debug('Image limit exceeded. Return images downloaded')
-                self.logger.info('%d images downloaded' % images_down)
-                return images_down
+                self.logger.info('%d images downloaded in %.2f seconds' % (images_down, elapsed_time))
+                return images_down, elapsed_time
 
-        self.logger.info('%d images downloaded' % images_down)
-        return images_down
+        elapsed_time = time.time() - start
+        self.logger.info('%d images downloaded in %.2f seconds' % (images_down, elapsed_time))
+        return images_down, elapsed_time
 
 
 if __name__ == '__main__':
-    scraper = GoogleImagesScraper(limit=1)
+    # Create OptionParser object and set options
+    parser = optparse.OptionParser(description='Scrap Google Images pages and download images from given query.')
 
-    count = scraper.get_images('spacex wallpaper')
-    print('%d images downloaded' % count)
+    parser.add_option('-q', '--query', dest='query',
+                      help='keywords for search images in Google Images, separated by commas', default='')
+    parser.add_option('-l', '--limit', dest='limit',
+                      help='max number of images to download (default: 100)', default='100')
+    parser.add_option('-o', '--output', dest='output_dir',
+                      help='directory where downloaded images will be stored', default=os.path.expanduser('~'))
+    parser.add_option('-e', '--extensions', dest='exts',
+                      help='allowed extensions to download, separated by commas', default='jpg,jpeg,png,bmp')
+    parser.add_option('-L', '--logger', dest='logger', action='store_true',
+                      help='enable logging', default=False)
+    parser.add_option('-p', '--prefix', dest='prefix',
+                      help='set prefix for image filenames', default='')
+    parser.add_option('-s', '--suffix', dest='suffix',
+                      help='set suffix for image filenames', default='')
 
+    opts, args = parser.parse_args()
+
+    # Store the command-line arguments in dictionary
+    kwargs = vars(opts)
+
+    # Format 'query' argument and delete it from dictionary (dictionary will be used to create the scraper object)
+    query = kwargs['query'].replace(',', ' ')
+    del kwargs['query']
+
+    # Format the allowed extensions
+    kwargs['exts'] = [x for x in kwargs['exts'].split(',')]
+
+    # Create scraper object
+    scraper = GoogleImagesScraper(**kwargs)
+
+    # Download images
+    count, elapsed = scraper.download_images(query)
+    print('%d images downloaded in %.2f seconds' % (count, elapsed))
