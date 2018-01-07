@@ -3,7 +3,7 @@
 import json
 import logging
 import requests
-import optparse
+import argparse
 import os
 import time
 
@@ -13,13 +13,8 @@ from time import localtime, strftime
 
 class GoogleImagesScraper:
 
-    def __init__(self,
-                 exts=['jpg', 'jpeg', 'png', 'bmp'],
-                 output_dir=os.path.expanduser('~'),
-                 prefix='',
-                 suffix='',
-                 limit=100,
-                 logger=False):
+    def __init__(self, exts=['jpg', 'jpeg', 'png', 'bmp'], output_dir=os.path.expanduser('~'),
+                 prefix='', suffix='', limit=100, logger=False):
         # We will make (maybe) several request to the same host, so reusing the same TCP connection
         # result in a significant performance increase
         self.session = requests.Session()
@@ -40,7 +35,10 @@ class GoogleImagesScraper:
         self.suffix = suffix if suffix == '' else '-' + suffix
 
         # Downloads limit
-        self.limit = int(limit)
+        self.limit = limit
+
+        # Leading zeros in image filename
+        self._zfill = len(str(self.limit))
 
         # Number of files in output_dir
         self.counter = 0
@@ -91,7 +89,10 @@ class GoogleImagesScraper:
 
         self.logger.debug('Setting image filename')
         # Set local filename and update counter attribute
-        local_filename = os.path.join(self.output_dir, '%s%04d%s.%s' % (self.prefix, self.counter + 1, self.suffix, extension))
+        local_filename = os.path.join(self.output_dir, '%s%s%s.%s' % (self.prefix,
+                                                                      str(self.counter + 1).zfill(self._zfill),
+                                                                      self.suffix,
+                                                                      extension))
         self.counter += 1
 
         self.logger.info('"%s" image downloaded from "%s"' % (local_filename, image_url))
@@ -152,24 +153,23 @@ class GoogleImagesScraper:
 
 if __name__ == '__main__':
     # Create OptionParser object and set options
-    parser = optparse.OptionParser(description='Scrap Google Images pages and download images from given query.')
+    parser = argparse.ArgumentParser(description='Scrap Google Images pages and download images from given query.')
 
-    parser.add_option('-q', '--query', dest='query',
-                      help='keywords for search images in Google Images, separated by commas', default='')
-    parser.add_option('-l', '--limit', dest='limit',
-                      help='max number of images to download (default: 100)', default='100')
-    parser.add_option('-o', '--output', dest='output_dir',
-                      help='directory where downloaded images will be stored', default=os.path.expanduser('~'))
-    parser.add_option('-e', '--extensions', dest='exts',
-                      help='allowed extensions to download, separated by commas', default='jpg,jpeg,png,bmp')
-    parser.add_option('-L', '--logger', dest='logger', action='store_true',
-                      help='enable logging', default=False)
-    parser.add_option('-p', '--prefix', dest='prefix',
-                      help='set prefix for image filenames', default='')
-    parser.add_option('-s', '--suffix', dest='suffix',
-                      help='set suffix for image filenames', default='')
+    parser.add_argument('query', help='keywords for search images in Google Images, separated by commas', default='')
+    parser.add_argument('-l', '--limit', dest='limit', type=int,
+                        help='max number of images to download (default: 100)', default='100')
+    parser.add_argument('-o', '--output', dest='output_dir',
+                        help='directory where downloaded images will be stored', default=os.path.expanduser('~'))
+    parser.add_argument('-e', '--extensions', dest='exts',
+                        help='allowed extensions to download, separated by commas', default='jpg,jpeg,png,bmp')
+    parser.add_argument('-L', '--logger', dest='logger', action='store_true',
+                        help='enable logging', default=False)
+    parser.add_argument('-p', '--prefix', dest='prefix',
+                        help='set prefix for image filenames', default='')
+    parser.add_argument('-s', '--suffix', dest='suffix',
+                        help='set suffix for image filenames', default='')
 
-    opts, args = parser.parse_args()
+    opts = parser.parse_args()
 
     # Store the command-line arguments in dictionary
     kwargs = vars(opts)
