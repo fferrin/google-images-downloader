@@ -32,7 +32,7 @@ You can start using **google-images-downloader** just by passing the search that
 python3 google-images-downloader.py nyan,cat
 ```
 
-This command will download the first 100 results for ~nyan cat~ and will store them in $HOME/nyan_cat/ directory.
+This command will download the first 100 results for *nyan cat* and will store them in `$HOME/nyan_cat/` directory.
 
 It also has another options, like:
 * ```-l, --limit```: Set max number of images to download (default: 100).
