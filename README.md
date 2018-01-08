@@ -1,6 +1,6 @@
 # Google Images Downloader
 
-**google-images-downloader** is a project for easily download a lot of images from Google Images with a given query.
+**google-images-downloader** is a project for easily download tons of images from Google Images with a given query.
 
 Are you mastering your computer vision skills (like me)? Do you need a lot of images to test your models but you don't want to download them by hand? **google-images-downloader** is here to help you!
 
